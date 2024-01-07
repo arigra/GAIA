@@ -10,7 +10,7 @@ from llama_index.text_splitter import SentenceSplitter
 import json
 
 parser = SentenceSplitter(
-    chunk_size=512,
+    chunk_size=128,
     chunk_overlap=10,
     #include_extra_info=False,
     include_prev_next_rel=False,
@@ -24,22 +24,25 @@ client = InferenceClient(model="http://gaia-u-01.westeurope.cloudapp.azure.com:8
 qna_prompt = """I want you to help me create a question and an answer for training a large language model. 
     Use the provided context that contains the a paragraph of text and write a question and an answer on this context. 
     Don't write anything except the question and the answer. your reply should start with ###Human: 
-    The format of your answer should be: ###Human: <question> ###Assitant: <answer> 
+    The format of your answer should be: 
+    ### Human ###
+    <question> 
+    ### Assitant ###
+    <answer> 
     """
 
-# iterate over the nodes in the index
 generated_qna = []
 
 for node in nodes:
 
     node_text = node.get_content()  
 
-    query = f"Context: {node_text}"
-
-    response = client.text_generation(prompt=query)
+    query = qna_prompt + f"\n\nContext: {node_text}"
+    #print(query)
+    response = client.text_generation(prompt=query,max_new_tokens=1000)
 
     generated_text = response  
-
+    #print(generated_text)
     split_text = generated_text.split("###Human:")  
     if len(split_text) > 1:
         question = split_text[1].split("###Assistant:")[0].strip()  
@@ -47,6 +50,10 @@ for node in nodes:
     else:
         question = ""
         answer = ""
+    
+    print("Question: -----", question)
+
+    print("Answer: -----", answer)
 
     generated_qna.append({
         "context": node_text,
